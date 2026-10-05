@@ -65,7 +65,7 @@ UIImage *moduleIconForImage(UIImage *image)
 
 	CGImageRef liIcon = LICreateIconForImage([image CGImage], imageVariant, 0);
 
-	return [[UIImage alloc] initWithCGImage:liIcon scale:screenScale orientation:0];
+	return [[UIImage alloc] initWithCGImage:liIcon scale:screenScale orientation:UIImageOrientationUp];
 }
 
 // Get fixed module identifiers from device specific plist (Return value: whether the plist was modified or not)
@@ -478,7 +478,8 @@ NSArray *g_mutableArrayPreventRemoval = nil;
 // Return fixed + non fixed modules
 + (NSMutableArray *)_defaultUserEnabledModuleIdentifiers
 {
-	NSMutableArray *defaultUserEnabledModuleIdentifiers = [[fixedModuleIdentifiers arrayByAddingObjectsFromArray:%orig] mutableCopy];
+	NSArray *orig = %orig;
+	NSMutableArray *defaultUserEnabledModuleIdentifiers = [[fixedModuleIdentifiers arrayByAddingObjectsFromArray:orig] mutableCopy];
 
 	// In iOS 15 the return order of this method is how the modules will be initially ordered on first launch
 	// Because CCSupport fucks this order up, we need to sort a few things manually so it appears just like it would on stock
@@ -1158,10 +1159,10 @@ CCUISettingsModuleDescription *CCUISettingsModuleDescription_CCSInitHook(NSStrin
 	NSInteger numberOfSections = [self numberOfSectionsInTableView:tableView];
 
 	if (indexPath.section == numberOfSections-1 || [self.preferenceClassForModuleIdentifiers objectForKey:moduleIdentifier]) {
-		return indexPath;
+		return YES;
 	}
 	else {
-		return nil;
+		return NO;
 	}
 }
 
