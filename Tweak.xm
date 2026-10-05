@@ -1200,6 +1200,35 @@ CCUISettingsModuleDescription *CCUISettingsModuleDescription_CCSInitHook(NSStrin
 
 %end
 
+%group ControlCenterIconState_iOS18
+
+// iOS 18 keeps the Control Center layout in ControlsIconState.plist, read through
+// the same icon model store as the Home Screen. Whenever SpringBoard runs without
+// CCSupport (safe mode, before the jailbreak after a reboot) it drops every third
+// party module from it and saves, so they never come back. Use a separate file
+// like for ModuleConfiguration.plist, starting from the stock one.
+%hook SBIconModelPropertyListFileStore
+
+- (instancetype)initWithIconStateURL:(NSURL *)iconStateURL desiredIconStateURL:(NSURL *)desiredIconStateURL
+{
+	if ([iconStateURL.lastPathComponent isEqualToString:@"ControlsIconState.plist"]) {
+		NSString *path = CCSupportControlsIconStatePath;
+		NSFileManager *fileManager = [NSFileManager defaultManager];
+		[fileManager createDirectoryAtPath:path.stringByDeletingLastPathComponent withIntermediateDirectories:YES attributes:nil error:nil];
+		if (![fileManager fileExistsAtPath:path] && iconStateURL.path && [fileManager fileExistsAtPath:iconStateURL.path]) {
+			[fileManager copyItemAtPath:iconStateURL.path toPath:path error:nil];
+		}
+		iconStateURL = [NSURL fileURLWithPath:path];
+		if (desiredIconStateURL) {
+			desiredIconStateURL = [NSURL fileURLWithPath:[path.stringByDeletingPathExtension stringByAppendingString:@"-desired.plist"]];
+		}
+	}
+	return %orig(iconStateURL, desiredIconStateURL);
+}
+
+%end
+%end
+
 %group safetyChecksFailed
 %hook SBHomeScreenViewController
 
@@ -1321,6 +1350,9 @@ static void bundleLoaded(CFNotificationCenterRef center, void *observer, CFStrin
 
 	if (isSpringBoard) {
 		if (!loadFixedModuleIdentifiers()) {
+			if (NSClassFromString(@"SBIconModelPropertyListFileStore")) {
+				%init(ControlCenterIconState_iOS18);
+			}
 			initControlCenterUIHooks();
 			initControlCenterServicesHooks();
 
